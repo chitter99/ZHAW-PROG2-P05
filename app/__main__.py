@@ -5,10 +5,10 @@ from . import services
 
 @inject
 def main(
-    routing: services.RoutingService = Provide[Container.routing_service]
+    cache: services.TransportCacheService = Provide[Container.cache_service]
 ):
-    route = routing.route("Bern", "Zürich")
-    print(route)
+    cache = cache.get_connections("Bern","Amsterdam")
+    print(cache)
 
 
 def run():
