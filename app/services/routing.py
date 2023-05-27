@@ -5,8 +5,8 @@ from .transport import TransportService
 from ..models import Route
 
 class RoutingService(BaseService):
-    def __init__(self, transport: TransportService, step_factor: int, nearness: float) -> None:
-        self.transport = transport
+    def __init__(self, transport_service: TransportService, step_factor: int, nearness: float) -> None:
+        self.transport = transport_service
         self.step_factor = step_factor
         super().__init__()
 
