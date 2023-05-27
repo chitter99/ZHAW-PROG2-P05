@@ -3,61 +3,81 @@ import math
 from .base import BaseService
 from .transport import TransportService
 from ..models import Route
+from .. import geomath
 
 class RoutingService(BaseService):
-    def __init__(self, transport_service: TransportService, step_factor: int, nearness: float) -> None:
+    def __init__(self, transport_service: TransportService, steps: int, nearness: int) -> None:
         self.transport = transport_service
-        self.step_factor = step_factor
+        self.steps = int(steps)
+        self.nearness = int(nearness)
         super().__init__()
-
-    def calculate_coverage(self, start, dest, reached) -> float:
-        total_distance = math.sqrt((dest[0] - start[0]) ** 2 + (dest[1] - start[1]) ** 2)
-        current_distance = math.sqrt((reached[0] - start[0]) ** 2 + (reached[1] - start[1]) ** 2)
-        return current_distance / total_distance
 
     def route(self, start, dest):
         # Check if a direct route is possible
         direct = self.transport.get_connections(start, dest)
-        if direct["connections"] is not None:
+        if not direct["connections"] is None and not len(direct["connections"]) == 0:
             return Route(
                 start=start,
                 dest=dest,
                 direct_route=True,
+                found_connection=True,
                 coverage=1,
                 connections=direct["connections"]
             )
 
-        # Approach the start location from the destination until a station has been found
-        x_step = abs(direct["from"]["coordinate"]["x"] - direct["to"]["coordinate"]["x"]) / self.step_factor
-        y_step = abs(direct["from"]["coordinate"]["y"] - direct["to"]["coordinate"]["y"]) / self.step_factor
-        near_loc = (direct["to"]["coordinate"]["x"], direct["to"]["coordinate"]["y"])
+        start_cor = (float(direct["from"]["coordinate"]["x"]), float(direct["from"]["coordinate"]["y"]))
+        dest_cor = (float(direct["to"]["coordinate"]["x"]), float(direct["to"]["coordinate"]["y"]))
+        intermediate_cords = geomath.calculate_intermediate_coordinates(dest_cor, start_cor, self.steps)
 
+        # Approach the start location from the destination until a suitable station has been found
         found_connection = False
-        while not found_connection:
-            near_loc = (near_loc[0] - x_step, near_loc[1] - y_step)
-            new_dest = self.transport.search_locations(x=near_loc[0], y=near_loc[1])
+        for cord in intermediate_cords:
+            new_dest = self.transport.search_locations(x=cord[0], y=cord[1], location_type="station")
 
-            if new_dest["stations"] is None:
+            #self.logger.debug(cord)
+
+            if new_dest["stations"] is None or len(new_dest["stations"]) == 0:
                 continue
 
-            # TODO: Implement nearness (~20 grad)
+            suitable_station = None
+            for station in new_dest["stations"]:
+                if station["id"] is None:
+                    continue
+                if int(station["distance"]) <= self.nearness:
+                    continue
+                if not suitable_station is None and suitable_station["distance"] < station["distance"]:
+                    continue
+                suitable_station = station
 
-            new_connection = self.transport.get_connections(start, new_dest["stations"][0]["name"])
-            if direct["connections"] is None:
+            if suitable_station is None:
+                continue
+
+            new_connection = self.transport.get_connections(start, suitable_station["name"])
+            if new_connection["connections"] is None or len(new_connection["connections"]) == 0:
                 continue
                 
             found_connection = True
+            break
 
+        if not found_connection:
+            return Route(
+                start=start,
+                dest=dest,
+                found_connection=False,
+            )
+
+        coverage = geomath.calculate_coverage_percentage(
+            start_cor,
+            dest_cor,
+            cord
+        )
         return Route(
             start=start,
             dest=dest,
             direct_route=False,
+            found_connection=True,
             nearest_startion=new_connection["to"]["name"],
-            coverage=self.calculate_coverage(
-                (direct["from"]["coordinate"]["x"], direct["from"]["coordinate"]["y"]),
-                (direct["to"]["coordinate"]["x"], direct["to"]["coordinate"]["y"]),
-                near_loc
-            ),
+            coverage=coverage,
             connections=new_connection["connections"]
         )
 

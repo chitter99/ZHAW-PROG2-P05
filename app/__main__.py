@@ -5,17 +5,16 @@ from . import services
 
 @inject
 def main(
-    routing: services.RoutingService = Provide[Container.routing_service]
+    cli: services.CLIService = Provide[Container.cli_service]
 ):
-    route = routing.route("Bern", "Zürich")
-    print(route)
+    cli.run()
 
 
 def run():
     container = Container()
     container.init_resources()
     container.wire(modules=[__name__])
-    
+
     main()
 
 if __name__ == "__main__":

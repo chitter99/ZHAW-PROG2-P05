@@ -5,8 +5,9 @@ from typing import Optional, Any
 class Route:
     start: str
     dest: str
-    direct_route: bool
-    coverage: float
+    found_connection: bool
+    coverage: float = 0
+    direct_route: Optional[bool] = None
     # TODO: Define type for connections
-    connections: Any
+    connections: Optional[Any] = None
     nearest_startion: Optional[str] = None

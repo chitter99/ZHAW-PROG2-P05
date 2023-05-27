@@ -18,6 +18,10 @@ class Container(containers.DeclarativeContainer):
     routing_service = providers.Singleton(
         services.RoutingService,
         transport_service=transport_service,
-        step_factor=config.router.step_factor,
+        steps=config.router.steps,
         nearness=config.router.nearness
+    )
+    cli_service = providers.Singleton(
+        services.CLIService,
+        routing_service=routing_service
     )
