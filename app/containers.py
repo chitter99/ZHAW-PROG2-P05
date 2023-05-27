@@ -15,6 +15,8 @@ class Container(containers.DeclarativeContainer):
         services.TransportService,
         url=config.transport.url
     )
+    cache_service = providers.Singleton(services.TransportCacheService,
+        transport_service=transport_service)
     routing_service = providers.Singleton(
         services.RoutingService,
         transport_service=transport_service,
