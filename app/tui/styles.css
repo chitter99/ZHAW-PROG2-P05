@@ -1,0 +1,33 @@
+
+.align-center-middle {
+    align: center middle;
+}
+
+#route-form {
+    layout: grid;
+    grid-size: 1;
+    grid-rows: 10%;
+}
+
+RouteWidget {
+    height: 100%;
+    width: 100%;
+    margin: 1 1;
+}
+
+RouteHeaderWidget {
+    layout: horizontal;
+    height: auto;
+}
+
+RouteHeaderWidget Label {
+    width: 1fr;
+}
+
+ConnectionTableWidget {
+    margin: 1 0;
+}
+
+LoadingRoutingScreen {
+    align: left bottom;
+}

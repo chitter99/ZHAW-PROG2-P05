@@ -1,14 +1,15 @@
 from dependency_injector.wiring import Provide, inject
 
+from .tui import textual
+
 from .containers import Container
-from . import services
+from . import tui
 
 @inject
 def main(
-    cli: services.CLIService = Provide[Container.cli_service]
+    ui: tui.TransportApp = Provide[Container.ui]
 ):
-    cli.run()
-
+    ui.run()
 
 def run():
     container = Container()

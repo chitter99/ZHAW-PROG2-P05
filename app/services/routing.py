@@ -1,9 +1,17 @@
 import math
+from enum import Enum
+from typing import List
 
 from .base import BaseService
 from .transport import TransportService
-from ..models import Route
+from ..models import Route, RoutingParameters, RoutingConnectingStationsParams, Location, RouteConnection
 from .. import geomath
+
+class RoutingProgressEnum(Enum):
+    ROUTING_DIRECTLY = 1,
+    FINDING_CONNECTING_STATIONS = 2,
+    ROUTING_INDIRECTLY = 3,
+    FINDING_FOLLOW_UP_CONNECTIONS = 4
 
 class RoutingService(BaseService):
     def __init__(self, transport_service: TransportService, steps: int, nearness: int) -> None:
@@ -12,7 +20,157 @@ class RoutingService(BaseService):
         self.nearness = int(nearness)
         super().__init__()
 
-    def route(self, start, dest):
+    def find_connecting_stations(self, params: RoutingConnectingStationsParams) -> List[Location]:
+        """Uses trigeometry to find stations in the line of sight of the start and destination"""
+        start = (params.start.coordinate.x, params.start.coordinate.y)
+        dest = (params.destination.coordinate.x, params.destination.coordinate.y)
+
+        stations = []
+        for point in geomath.calculate_intermediate_coordinates(dest, start, params.steps):
+            locations = self.filter_suitable_locations(
+                self.transport.search_locations(x=point[0], y=point[1], location_type="station"),
+                nearness=params.nearness
+            )
+
+            if len(locations) == 0:
+                continue
+
+            if params.only_nearest:
+                locations = [locations[0]]
+
+            for location in locations:
+                if len(stations) > params.stop_at:
+                    return stations
+                stations.append(location)
+        return stations
+
+    def find_follow_up_connections(self, start, dest):
+        pass
+
+    def filter_suitable_locations(self, locations: List[Location], sort=True, nearness=None):
+        """Filter a list of locations according to parameters"""
+        filtered = []
+        for location in locations:
+            # Transport API is inconsistent and sometimes returns invalid locations without an ID
+            if location.id is None:
+                continue
+            if nearness:
+                if location.distance <= nearness:
+                    continue
+            filtered.append(location)
+        if sort:
+            filtered.sort(key=lambda x: x.distance or 999999)
+        return filtered
+
+
+    def route(self, params: RoutingParameters, callback=None):
+        if callback:
+            callback(RoutingProgressEnum.ROUTING_DIRECTLY)
+
+        start_location = self.filter_suitable_locations(
+            self.transport.search_locations(params.start, location_type="station")
+        )[0]
+        destination_location = self.filter_suitable_locations(
+            self.transport.search_locations(params.destination, location_type="station")
+        )[0]
+        
+        direct = self.transport.get_connections(params.start, params.destination)
+        if len(direct) > 0:
+            return Route(
+                start=start_location,
+                destination=destination_location,
+                found_connection=True,
+                only_direct_routes=True,
+                connections=[RouteConnection(**connection.__dict__) for connection in direct]
+            )
+
+        if callback:
+            callback(RoutingProgressEnum.FINDING_CONNECTING_STATIONS)
+
+        connecting_stations = self.find_connecting_stations(RoutingConnectingStationsParams(
+            start=start_location,
+            destination=destination_location,
+            steps=params.steps if params.steps else self.steps,
+            nearness=params.nearness if params.nearness else self.nearness,
+            # TODO: Add stop_at param to config and make overrideable
+            stop_at=10,
+        ))
+
+        if len(connecting_stations) == 0:
+            return Route(
+                start=start_location,
+                destination=destination_location,
+                found_connection=False
+            )
+
+        if callback:
+            callback(RoutingProgressEnum.ROUTING_INDIRECTLY)
+
+        start_latlg = (start_location.coordinate.x, start_location.coordinate.y)
+        destination_latlg = (destination_location.coordinate.x, destination_location.coordinate.y)
+
+        # Aggregation for recommendation
+        best_coverage = None
+        best_coverage_station = None
+
+        alternative_stations = []
+        alternative_connections = []
+        for station in connecting_stations:
+            connections = self.transport.get_connections(params.start, station.name)
+            
+            if len(connections) == 0:
+                continue
+            
+            for connection in connections:
+                alternative_latlg = (
+                    connection.to.station.coordinate.x, 
+                    connection.to.station.coordinate.y
+                    )
+                coverage = geomath.calculate_coverage_percentage(
+                    start_latlg,
+                    destination_latlg,
+                    alternative_latlg
+                )
+
+                if best_coverage is None or coverage > best_coverage:
+                    best_coverage = coverage
+                    best_coverage_station = connection.to.station.name
+
+                alternative_stations.append(connection.to.station.name)
+                alternative_connections.append(RouteConnection(
+                    direct_connection=False,
+                    coverage=coverage,
+                    **connection.__dict__
+                ))
+
+        if len(alternative_connections) == 0:
+            return Route(
+                start=start_location,
+                destination=destination_location,
+                found_connection=False
+            )
+
+        if callback:
+            callback(RoutingProgressEnum.FINDING_FOLLOW_UP_CONNECTIONS)
+
+        #follow_up_connections = []
+        #for connection in alternative_connections:
+        #    self.find_follow_up_connections(params.start, params.dest, connection)
+
+        return Route(
+            start=start_location,
+            destination=destination_location,
+            found_connection=True,
+            only_direct_routes=False,
+            connecting_stations=connecting_stations,
+            connections=alternative_connections,
+            best_coverage=best_coverage,
+            best_coverage_station=best_coverage_station
+        )
+
+
+    # TODO: Remove depricated routing fn
+    def __depricated__route(self, start, dest):
         # Check if a direct route is possible
         direct = self.transport.get_connections(start, dest)
         if not direct["connections"] is None and not len(direct["connections"]) == 0:
@@ -41,6 +199,7 @@ class RoutingService(BaseService):
 
             suitable_station = None
             for station in new_dest["stations"]:
+                # Transport API is inconsistent and sometimes returns invalid stops without an ID
                 if station["id"] is None:
                     continue
                 if int(station["distance"]) <= self.nearness:
@@ -80,4 +239,3 @@ class RoutingService(BaseService):
             coverage=coverage,
             connections=new_connection["connections"]
         )
-

@@ -1,7 +1,7 @@
 from dependency_injector import containers, providers
 import logging.config
 
-from . import services
+from . import services, tui
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration(ini_files=["config.ini"])
@@ -15,6 +15,10 @@ class Container(containers.DeclarativeContainer):
         services.TransportService,
         url=config.transport.url
     )
+    location_autocomplet_service = providers.Singleton(
+        services.LocationAutocompletService,
+        url=config.search.url
+    )
     cache_service = providers.Singleton(services.TransportCacheService,
         transport_service=transport_service)
     routing_service = providers.Singleton(
@@ -26,4 +30,11 @@ class Container(containers.DeclarativeContainer):
     cli_service = providers.Singleton(
         services.CLIService,
         routing_service=routing_service
+    )
+
+    # UI
+    ui = providers.Singleton(
+        tui.TransportApp,
+        routing_service=routing_service,
+        location_autocomplet_service=location_autocomplet_service
     )
