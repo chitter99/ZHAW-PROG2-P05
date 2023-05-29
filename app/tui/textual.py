@@ -16,10 +16,9 @@ class TransportApp(App):
 
     BINDINGS = [
         ("q", "quit", "Quit"),
-        ("?", "help", "Help"),
-        ("o", "options", "Options"),
         ("n", "new_trip", "New trip"),
         ("d", "trip_detail", "Connection details"),
+        ("k", "push_screen('key_stations')", "Key stations (Req 1.2.1)"),
     ]
 
     current_route = reactive(None)
@@ -28,16 +27,19 @@ class TransportApp(App):
         self,
         routing_service: services.RoutingService,
         location_autocomplet_service: services.LocationAutocompletService,
+        key_station_service: services.KeyStationsService,
         driver_class=None,
         css_path=None,
         watch_css=False,
     ):
         self.routing_service = routing_service
         self.location_autocomplet_service = location_autocomplet_service
+        self.key_station_service = key_station_service
         super().__init__(driver_class, css_path, watch_css)
 
     def on_mount(self) -> None:
         self.install_screen(screens.CreateNewRouteScreen, name="create_new_route")
+        self.install_screen(screens.KeyStationsScreen, name="key_stations")
 
     def compose(self) -> ComposeResult:
         yield Header()

@@ -7,4 +7,7 @@ from textual.widgets import Label
 class TransportWelcome(Widget):
     def compose(self) -> ComposeResult:
         with Container(classes="align-center-middle"):
+            yield Label("Welcome, this app uses shortcuts or the mouse to navigate!")
             yield Label("(N) Start by creating a new trip!")
+            yield Label("(D) Go into connection details")
+            yield Label("(K) Check basic functionality (R 1.2.1)")

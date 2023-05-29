@@ -5,3 +5,4 @@ from .cli import CLIService
 from .cache import TransportCacheService
 from .location_autocomplet import LocationAutocompletService
 from .foreign_providers import ForeignProvidersService
+from .key_stations import KeyStationsService

@@ -3,10 +3,16 @@
     align: center middle;
 }
 
-#route-form {
+CreateNewRouteScreen {
+    margin: 4 8;
+    border: ascii $accent;
     layout: grid;
-    grid-size: 1;
-    grid-rows: 10%;
+    grid-rows: 3;
+    grid-gutter: 1;
+}
+
+CreateNewRouteScreen Button {
+    margin: 0 1;
 }
 
 RouteWidget {

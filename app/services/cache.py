@@ -16,7 +16,7 @@ class TransportCacheService(BaseService):
 
     def load_from_file(self):
         try:
-            with open(self.path, "r") as file:
+            with open(self.path, "r", newline="") as file:
                 reader = csv.DictReader(file)
                 for row in reader:
                     start = row["start"]

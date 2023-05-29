@@ -27,6 +27,13 @@ class Container(containers.DeclarativeContainer):
         transport_service=transport_service,
         path=config.data.blacklist_connections,
     )
+    key_station_service = providers.Singleton(
+        services.KeyStationsService,
+        transport_service=cache_service,
+        home_station=config.key_stations.home_station,
+        path_key_stations=config.data.key_stations,
+        path_key_stations_tracking=config.data.key_stations_tracking,
+    )
     foreign_providers_service = providers.Singleton(
         services.ForeignProvidersService, path=config.data.foreign_providers
     )
@@ -47,4 +54,5 @@ class Container(containers.DeclarativeContainer):
         tui.TransportApp,
         routing_service=routing_service,
         location_autocomplet_service=location_autocomplet_service,
+        key_station_service=key_station_service,
     )

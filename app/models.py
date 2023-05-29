@@ -3,6 +3,15 @@ from typing import Optional, Any, List
 
 
 @dataclass
+class KeyStationTracking:
+    start: str
+    station: str
+    reachable: bool
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+@dataclass
 class Route:
     start: "Location"
     destination: "Location"
