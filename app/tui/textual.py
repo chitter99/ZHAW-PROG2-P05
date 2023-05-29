@@ -19,7 +19,7 @@ class TransportApp(App):
         ("?", "help", "Help"),
         ("o", "options", "Options"),
         ("n", "new_trip", "New trip"),
-        ("enter", "new_trip", "Connection details"),
+        ("d", "trip_detail", "Connection details"),
     ]
 
     current_route = reactive(None)
@@ -28,14 +28,12 @@ class TransportApp(App):
         self,
         routing_service: services.RoutingService,
         location_autocomplet_service: services.LocationAutocompletService,
-        foreign_providers_service: services.ForeignProvidersService
         driver_class=None,
         css_path=None,
         watch_css=False,
     ):
         self.routing_service = routing_service
         self.location_autocomplet_service = location_autocomplet_service
-        self.foreign_providers_service = foreign_providers_service
         super().__init__(driver_class, css_path, watch_css)
 
     def on_mount(self) -> None:
@@ -51,6 +49,15 @@ class TransportApp(App):
             self.current_route = route
 
         self.push_screen("create_new_route", update_route)
+
+    def action_trip_detail(self) -> None:
+        if self.current_route:
+            table = self.query_one(DataTable)
+            self.push_screen(
+                screens.ConnectionDetailsScreen(
+                    self.current_route.connections[table.cursor_row]
+                )
+            )
 
     def action_quit(self) -> None:
         self.exit(0)

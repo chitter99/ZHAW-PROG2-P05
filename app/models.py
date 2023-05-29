@@ -13,6 +13,7 @@ class Route:
     connecting_stations: Optional[List["Location"]] = None
     best_coverage: Optional[float] = None
     best_coverage_station: Optional[str] = None
+    best_coverage_providers: Optional[List["RouteConnectionProvider"]] = None
 
 
 @dataclass
@@ -114,6 +115,16 @@ class RouteConnection(Connection):
     direct_connection: bool = True
     coverage: float = 1
     service_end_country: str = "CH"
+    providers: Optional[List["RouteConnectionProvider"]] = None
+
+
+@dataclass
+class RouteConnectionProvider:
+    name: str
+    url: str
+    country: str
+    country_code: str
+    coverage: float
 
 
 @dataclass

@@ -5,6 +5,7 @@ from geopy.geocoders import Nominatim
 
 from .base import BaseService
 from .transport import TransportService
+from .foreign_providers import ForeignProvidersService
 from ..models import (
     Route,
     RoutingParameters,
@@ -12,15 +13,15 @@ from ..models import (
     Location,
     RouteLocation,
     RouteConnection,
+    RouteConnectionProvider,
 )
 from .. import geomath
 
 
 class RoutingProgressEnum(Enum):
-    ROUTING_DIRECTLY = (1,)
-    FINDING_CONNECTING_STATIONS = (2,)
-    ROUTING_INDIRECTLY = (3,)
-    FINDING_FOLLOW_UP_CONNECTIONS = 4
+    ROUTING_DIRECTLY = 1
+    FINDING_CONNECTING_STATIONS = 2
+    ROUTING_INDIRECTLY = 3
 
 
 class RoutingService(BaseService):
@@ -28,11 +29,13 @@ class RoutingService(BaseService):
         self,
         geolocator: Nominatim,
         transport_service: TransportService,
+        foreign_providers_service: ForeignProvidersService,
         steps: int,
         nearness: int,
     ) -> None:
         self.geolocator = geolocator
         self.transport = transport_service
+        self.foreign_providers = foreign_providers_service
         self.steps = int(steps)
         self.nearness = int(nearness)
         super().__init__()
@@ -44,15 +47,15 @@ class RoutingService(BaseService):
         return None
 
     def find_connecting_stations(
-        self, params: RoutingConnectingStationsParams
+        self, params: RoutingConnectingStationsParams, on_progress=None
     ) -> List[RouteLocation]:
         """Uses trigeometry to find stations in the line of sight of the start and destination"""
         start = (params.start.coordinate.x, params.start.coordinate.y)
         dest = (params.destination.coordinate.x, params.destination.coordinate.y)
 
         stations = []
-        for point in geomath.calculate_intermediate_coordinates(
-            dest, start, params.steps
+        for i, point in enumerate(
+            geomath.calculate_intermediate_coordinates(dest, start, params.steps)
         ):
             locations = self.filter_suitable_locations(
                 self.transport.search_locations(
@@ -60,6 +63,10 @@ class RoutingService(BaseService):
                 ),
                 nearness=params.nearness,
             )
+
+            # Optional: Report progress
+            if on_progress:
+                on_progress(params.steps, i + 1)
 
             if len(locations) == 0:
                 continue
@@ -75,6 +82,8 @@ class RoutingService(BaseService):
 
             for location in locations:
                 if len(stations) > params.stop_at:
+                    if on_progress:
+                        on_progress(params.steps, params.steps)
                     return stations
                 stations.append(RouteLocation(country=country, **location.__dict__))
         return stations
@@ -122,6 +131,9 @@ class RoutingService(BaseService):
                 ],
             )
 
+        def stations_on_progress(total, step):
+            callback(RoutingProgressEnum.FINDING_CONNECTING_STATIONS, total, step)
+
         if callback:
             callback(RoutingProgressEnum.FINDING_CONNECTING_STATIONS)
 
@@ -133,7 +145,8 @@ class RoutingService(BaseService):
                 nearness=params.nearness if params.nearness else self.nearness,
                 # TODO: Add stop_at param to config and make overrideable
                 stop_at=10,
-            )
+            ),
+            on_progress=stations_on_progress if callback else None,
         )
 
         if len(connecting_stations) == 0:
@@ -143,8 +156,14 @@ class RoutingService(BaseService):
                 found_connection=False,
             )
 
+        def indirect_on_progress(total, step):
+            callback(RoutingProgressEnum.ROUTING_INDIRECTLY, total, step)
+
         if callback:
-            callback(RoutingProgressEnum.ROUTING_INDIRECTLY)
+            # We send a small fractions as the current progress cannot be reset to zero
+            callback(
+                RoutingProgressEnum.ROUTING_INDIRECTLY, len(connecting_stations), 0.1
+            )
 
         start_latlg = (start_location.coordinate.x, start_location.coordinate.y)
         destination_latlg = (
@@ -155,12 +174,16 @@ class RoutingService(BaseService):
         # Aggregation for recommendation
         best_coverage = None
         best_coverage_station = None
+        best_coverage_providers = None
 
         countries = set()
         alternative_stations = []
         alternative_connections = []
-        for station in connecting_stations:
+        for i, station in enumerate(connecting_stations):
             connections = self.transport.get_connections(params.start, station.name)
+
+            if callback:
+                indirect_on_progress(len(connecting_stations), i + 1)
 
             if len(connections) == 0:
                 continue
@@ -176,9 +199,42 @@ class RoutingService(BaseService):
                     start_latlg, destination_latlg, alternative_latlg
                 )
 
+                providers = [
+                    RouteConnectionProvider(
+                        name="SBB",
+                        url="https://www.sbb.ch",
+                        country="Schweiz",
+                        country_code="CH",
+                        coverage=coverage,
+                    )
+                ]
+
+                foreign_provider = self.foreign_providers.get(station.country)
+                if foreign_provider:
+                    providers.append(
+                        RouteConnectionProvider(
+                            name=foreign_provider.name,
+                            url=foreign_provider.url,
+                            country=foreign_provider.country,
+                            country_code=foreign_provider.country_code,
+                            coverage=1 - coverage,
+                        )
+                    )
+                else:
+                    providers.append(
+                        RouteConnectionProvider(
+                            name="Unknown",
+                            url="",
+                            country="",
+                            country_code=station.country,
+                            coverage=1 - coverage,
+                        )
+                    )
+
                 if best_coverage is None or coverage > best_coverage:
                     best_coverage = coverage
                     best_coverage_station = connection.to.station.name
+                    best_coverage_providers = providers
 
                 alternative_stations.append(connection.to.station.name)
                 alternative_connections.append(
@@ -186,6 +242,7 @@ class RoutingService(BaseService):
                         direct_connection=False,
                         coverage=coverage,
                         service_end_country=station.country,
+                        providers=providers,
                         **connection.__dict__,
                     )
                 )
@@ -197,13 +254,6 @@ class RoutingService(BaseService):
                 found_connection=False,
             )
 
-        if callback:
-            callback(RoutingProgressEnum.FINDING_FOLLOW_UP_CONNECTIONS)
-
-        # follow_up_connections = []
-        # for connection in alternative_connections:
-        #    self.find_follow_up_connections(params.start, params.dest, connection)
-
         return Route(
             start=start_location,
             destination=destination_location,
@@ -213,5 +263,6 @@ class RoutingService(BaseService):
             connections=alternative_connections,
             best_coverage=best_coverage,
             best_coverage_station=best_coverage_station,
+            best_coverage_providers=best_coverage_providers,
             service_end_countries=countries,
         )

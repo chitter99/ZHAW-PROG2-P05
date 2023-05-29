@@ -22,8 +22,13 @@ def parse_duration(s: str) -> int:
     return " ".join(parts)
 
 
+def prase_date(s: str) -> str:
+    datetime_obj = datetime.strptime(s, "%Y-%m-%dT%H:%M:%S%z")
+    return datetime_obj.strftime("%Y-%m-%d %H:%M")
+
+
 def parse_procent(d) -> str:
-    return str(math.floor(d * 100)) + "%"
+    return str(round(d * 100)) + "%"
 
 
 # See https://stackoverflow.com/a/60124334 for sources

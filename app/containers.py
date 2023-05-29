@@ -13,7 +13,7 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Geolocator
-    geolocator = providers.Singleton(Nominatim, user_agent="my_app")
+    geolocator = providers.Singleton(Nominatim, user_agent="tbz_transport_app")
 
     # Services
     transport_service = providers.Singleton(
@@ -23,20 +23,23 @@ class Container(containers.DeclarativeContainer):
         services.LocationAutocompletService, url=config.search.url
     )
     cache_service = providers.Singleton(
-        services.TransportCacheService, transport_service=transport_service
+        services.TransportCacheService,
+        transport_service=transport_service,
+        path=config.data.blacklist_connections,
+    )
+    foreign_providers_service = providers.Singleton(
+        services.ForeignProvidersService, path=config.data.foreign_providers
     )
     routing_service = providers.Singleton(
         services.RoutingService,
         geolocator=geolocator,
-        transport_service=transport_service,
+        transport_service=cache_service,
+        foreign_providers_service=foreign_providers_service,
         steps=config.router.steps,
         nearness=config.router.nearness,
     )
     cli_service = providers.Singleton(
         services.CLIService, routing_service=routing_service
-    )
-    foreign_providers_service = providers.Singleton(
-        services.ForeignProvidersService, path=config.data.foreign_providers
     )
 
     # UI
@@ -44,5 +47,4 @@ class Container(containers.DeclarativeContainer):
         tui.TransportApp,
         routing_service=routing_service,
         location_autocomplet_service=location_autocomplet_service,
-        foreign_providers_service=foreign_providers_service,
     )

@@ -11,7 +11,7 @@ class ForeignProvidersService(BaseService):
         super().__init__()
 
     def load_from_file(self):
-        providers = []
+        self.providers = []
         with open(self.path, "r", newline="") as file:
             reader = csv.DictReader(file)
             for row in reader:
@@ -21,10 +21,10 @@ class ForeignProvidersService(BaseService):
                     name=row["name"],
                     url=row["url"],
                 )
-                providers.append(provider)
-        return providers
+                self.providers.append(provider)
+        return self.providers
 
-    def get(self, country_code):
+    def get(self, country_code) -> models.ForeignProvider:
         for provider in self.providers:
             if provider.country_code == country_code:
                 return provider

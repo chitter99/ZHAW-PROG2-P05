@@ -29,5 +29,35 @@ ConnectionTableWidget {
 }
 
 LoadingRoutingScreen {
-    align: left bottom;
+    
+}
+
+ConnectionDetailsScreen {
+    layout: horizontal;
+}
+
+ConnectionOverviewWidget {
+    margin: 1 1;
+    height: 100%;
+    width: 1fr;
+}
+
+ConnectionSectionsWidget {
+    margin: 1 1;
+    height: 100%;
+    width: 2fr;
+}
+
+ConnectionSectionsWidget DataTable {
+    height: 100%;
+}
+
+ConnectionNotDirectInfoWidget {
+    border: heavy red;
+    height: auto;
+    width: 100%;
+}
+
+ConnectionNotDirectInfoWidget TextLog {
+    height: auto;
 }
