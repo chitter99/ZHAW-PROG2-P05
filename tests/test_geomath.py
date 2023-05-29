@@ -1,5 +1,6 @@
 import unittest
-from  app import geomath
+from app import geomath
+
 
 class GeomathTests(unittest.TestCase):
     def assertTupleAlmostEqual(self, tuple1, tuple2, places=7):
@@ -30,4 +31,3 @@ class GeomathTests(unittest.TestCase):
         cart = geomath.convert_to_cartesian(coord1)
         coord2 = geomath.convert_to_latlon(cart)
         self.assertCoordinatesAlmostEqual(coord1, coord2)
-   

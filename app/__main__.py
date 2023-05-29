@@ -5,11 +5,11 @@ from .tui import textual
 from .containers import Container
 from . import tui
 
+
 @inject
-def main(
-    ui: tui.TransportApp = Provide[Container.ui]
-):
+def main(ui: tui.TransportApp = Provide[Container.ui]):
     ui.run()
+
 
 def run():
     container = Container()
@@ -17,6 +17,7 @@ def run():
     container.wire(modules=[__name__])
 
     main()
+
 
 if __name__ == "__main__":
     run()

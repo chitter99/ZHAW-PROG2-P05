@@ -1,6 +1,7 @@
 import numpy as np
 from haversine import haversine
 
+
 # Conversion from and to latlon coordinate using https://stackoverflow.com/a/55256861
 def convert_to_cartesian(coord):
     lat, lon = coord
@@ -14,6 +15,7 @@ def convert_to_cartesian(coord):
 
     return x, y, z
 
+
 def convert_to_latlon(coord):
     x, y, z = coord
 
@@ -24,6 +26,7 @@ def convert_to_latlon(coord):
     lon = np.degrees(lon_rad)
 
     return lat, lon
+
 
 def calculate_intermediate_coordinates(coord1, coord2, num_points):
     x1, y1, z1 = convert_to_cartesian(coord1)
@@ -47,6 +50,7 @@ def calculate_intermediate_coordinates(coord1, coord2, num_points):
         intermediate_coordinates.append((lat, lon))
 
     return intermediate_coordinates
+
 
 def calculate_coverage_percentage(start_coord, end_coord, current_coord):
     total_distance = haversine(start_coord, end_coord)

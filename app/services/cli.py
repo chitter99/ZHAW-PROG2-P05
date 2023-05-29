@@ -2,6 +2,7 @@ from .base import BaseService
 from .routing import RoutingService
 from .. import utils
 
+
 class CLIService(BaseService):
     def __init__(self, routing_service: RoutingService) -> None:
         self.routing = routing_service
@@ -15,7 +16,9 @@ class CLIService(BaseService):
 
     def print_usage(self):
         if self.current_route:
-            print(f"[#] Current trip: {self.current_route.start} -> {self.current_route.dest}")
+            print(
+                f"[#] Current trip: {self.current_route.start} -> {self.current_route.dest}"
+            )
             print("")
 
         print("Choose a option:")
@@ -40,8 +43,10 @@ class CLIService(BaseService):
             print(f"SBB Coverage: {route.coverage * 100}%")
             print("Connections:")
             for connection in route.connections:
-                duration = utils.parse_duration(connection['duration'])
-                print(f"From: {connection['from']['station']['name']} To: {connection['to']['station']['name']} Travel Time: {duration}m")
+                duration = utils.parse_duration(connection["duration"])
+                print(
+                    f"From: {connection['from']['station']['name']} To: {connection['to']['station']['name']} Travel Time: {duration}m"
+                )
 
     def create_new_route(self):
         start = input("Enter the start location: ")
@@ -78,4 +83,3 @@ class CLIService(BaseService):
                 continue
 
             print("Unknown option, please retry!")
-            

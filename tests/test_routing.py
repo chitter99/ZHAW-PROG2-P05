@@ -4,13 +4,16 @@ from unittest import mock
 from app.models import Route
 from app.services import TransportService, RoutingService
 
+
 class RoutingTest(unittest.TestCase):
     def setUp(self):
         # Create a mock instance of the TransportService
         self.transport_service_mock = mock.Mock(spec=TransportService)
         self.steps = 5
         self.nearness = 10
-        self.routing_service = RoutingService(self.transport_service_mock, self.steps, self.nearness)
+        self.routing_service = RoutingService(
+            self.transport_service_mock, self.steps, self.nearness
+        )
 
     def test_route_direct_route_available(self):
         # Prepare the mock return value for direct route
@@ -48,11 +51,15 @@ class RoutingTest(unittest.TestCase):
             "from": {"coordinate": {"x": "0", "y": "0"}},
             "to": {"coordinate": {"x": "10", "y": "10"}},
         }
-        self.transport_service_mock.search_locations.return_value = {"stations": [{"name": "B", "distance": 15}]}
+        self.transport_service_mock.search_locations.return_value = {
+            "stations": [{"name": "B", "distance": 15}]
+        }
 
         intermediate_cords = [(2, 2), (4, 4), (6, 6), (8, 8)]
         geomath_mock = mock.Mock()
-        geomath_mock.calculate_intermediate_coordinates.return_value = intermediate_cords
+        geomath_mock.calculate_intermediate_coordinates.return_value = (
+            intermediate_cords
+        )
 
         with mock.patch("app.geomath", geomath_mock):
             # Call the route method
@@ -72,8 +79,12 @@ class RoutingTest(unittest.TestCase):
 
         # Ensure that the mock methods were called with the correct arguments
         self.transport_service_mock.get_connections.assert_called_once_with(start, "B")
-        self.transport_service_mock.search_locations.assert_called_once_with(x=6, y=6, location_type="station")
-        geomath_mock.calculate_intermediate_coordinates.assert_called_once_with((10, 10), (0, 0), self.steps)
+        self.transport_service_mock.search_locations.assert_called_once_with(
+            x=6, y=6, location_type="station"
+        )
+        geomath_mock.calculate_intermediate_coordinates.assert_called_once_with(
+            (10, 10), (0, 0), self.steps
+        )
 
     def test_route_no_connection_found(self):
         # Prepare the mock return values for no connection found

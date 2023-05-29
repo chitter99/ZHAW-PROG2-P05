@@ -1,16 +1,19 @@
 from dataclasses import dataclass
 from typing import Optional, Any, List
 
+
 @dataclass
 class Route:
     start: "Location"
     destination: "Location"
     found_connection: bool
+    service_end_countries: Optional[List[str]] = None
     only_direct_routes: Optional[bool] = None
     connections: Optional[List["RouteConnection"]] = None
     connecting_stations: Optional[List["Location"]] = None
     best_coverage: Optional[float] = None
     best_coverage_station: Optional[str] = None
+
 
 @dataclass
 class RoutingParameters:
@@ -18,6 +21,7 @@ class RoutingParameters:
     destination: str
     steps: Optional[int] = None
     nearness: Optional[int] = None
+
 
 @dataclass
 class RoutingConnectingStationsParams:
@@ -27,6 +31,7 @@ class RoutingConnectingStationsParams:
     nearness: int = 1000
     stop_at: int = 10
     only_nearest: bool = True
+
 
 @dataclass
 class Coordinates:
@@ -103,7 +108,22 @@ class Connection:
     capacity2nd: Optional[str]
     sections: Optional[List[Section]]
 
+
 @dataclass
 class RouteConnection(Connection):
     direct_connection: bool = True
     coverage: float = 1
+    service_end_country: str = "CH"
+
+
+@dataclass
+class RouteLocation(Location):
+    country: str
+
+
+@dataclass
+class ForeignProvider:
+    country: str
+    country_code: str
+    name: str
+    url: str
