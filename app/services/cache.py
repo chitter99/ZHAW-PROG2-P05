@@ -9,7 +9,6 @@ import csv
 
 from .base import BaseService
 from .transport import TransportService
-from .. import models
 
 
 class TransportCacheService(BaseService):
